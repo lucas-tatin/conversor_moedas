@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:conversor_moedas/widgets/custom_text_field.dart';// Importe o widget aqui
 
 class ConverteMoedas extends StatefulWidget {
   @override
@@ -175,10 +176,14 @@ class _ConverteMoedasState extends State<ConverteMoedas> with TickerProviderStat
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Moeda de Origem',
-                      style: TextStyle(fontSize: 16.0),
-                    ),
+                    Text('Moeda de Origem'),
+                    Text('Moeda de Destino'),
+                  ],
+                ),
+                SizedBox(height: 20.0),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
                     DropdownButton<String>(
                       value: _moedaOrigemSelecionada,
                       onChanged: (String? novaMoeda) {
@@ -196,16 +201,6 @@ class _ConverteMoedasState extends State<ConverteMoedas> with TickerProviderStat
                         _moedaOrigemSelecionada == null ? 'Selecionar' : '',
                         style: TextStyle(color: _moedaOrigemSelecionada == null ? Colors.grey[400] : Colors.black),
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 20.0),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Moeda de Destino',
-                      style: TextStyle(fontSize: 16.0),
                     ),
                     DropdownButton<String>(
                       value: _moedaDestinoSelecionada,
@@ -228,15 +223,9 @@ class _ConverteMoedasState extends State<ConverteMoedas> with TickerProviderStat
                   ],
                 ),
                 SizedBox(height: 20.0),
-                TextFormField(
-                  enabled: _moedaOrigemSelecionada != null && _moedaDestinoSelecionada != null,
+                CustomTextField(
                   controller: _controller,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: 'Digite o valor a ser convertido',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: _validateInput,
+                  icon: Icons.attach_money,
                 ),
                 SizedBox(height: 20.0),
                 ElevatedButton(
