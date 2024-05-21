@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:conversor_moedas/widgets/custom_text_field.dart';// Importe o widget aqui
+import 'package:conversor_moedas/widgets/custom_text_field.dart';
+import '../database/converte_dao.dart';
+import 'historico.dart';
 
 class ConverteMoedas extends StatefulWidget {
   @override
   _ConverteMoedasState createState() => _ConverteMoedasState();
 }
 
-class _ConverteMoedasState extends State<ConverteMoedas> with TickerProviderStateMixin {
+class _ConverteMoedasState extends State<ConverteMoedas> with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   double _result = 0.0;
   String? _moedaOrigemSelecionada;
@@ -15,8 +17,8 @@ class _ConverteMoedasState extends State<ConverteMoedas> with TickerProviderStat
   bool _showError = false;
   bool _isConverting = false;
   late AnimationController _animationController;
+  final ConverteDAO _converteDAO = ConverteDAO(); // Instância da classe ConverteDAO
 
-  // Definindo as taxas de câmbio corrigidas
   final Map<String, double> _taxasDeCambio = {
     'Real': 1.0,
     'Dólar': 0.20,
@@ -38,17 +40,24 @@ class _ConverteMoedasState extends State<ConverteMoedas> with TickerProviderStat
     super.dispose();
   }
 
-  String? _validateInput(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Favor, adicionar um valor para ser convertido';
-    }
-    if (double.tryParse(value) == null) {
-      return 'Somente números são permitidos';
-    }
-    return null;
+  // Método para salvar a conversão no banco de dados
+  Future<void> _salvarConversao(double valor, double resultado) async {
+    String moedaOrigem = _moedaOrigemSelecionada ?? '';
+    String moedaDestino = _moedaDestinoSelecionada ?? '';
+    await _converteDAO.saveConversao(moedaOrigem, moedaDestino, valor, resultado);
   }
 
-  void _converterMoeda() {
+  // Método para recuperar o histórico de conversões do banco de dados
+  Future<List<Map<String, dynamic>>> _recuperarHistorico() async {
+    return await _converteDAO.getConversoes();
+  }
+
+  // Método para excluir uma conversão do banco de dados
+  Future<void> _excluirConversao(int id) async {
+    await _converteDAO.deleteConversao(id);
+  }
+
+  void _converterMoeda() async {
     setState(() {
       _showError = false;
     });
@@ -79,8 +88,10 @@ class _ConverteMoedasState extends State<ConverteMoedas> with TickerProviderStat
 
     _animationController.repeat();
 
-    // Desabilita o botão Converter durante a conversão
     _disableConverterButton();
+
+    // Salvar a conversão no banco de dados
+    await _salvarConversao(valor, _result);
   }
 
   void _disableConverterButton() {
@@ -101,13 +112,13 @@ class _ConverteMoedasState extends State<ConverteMoedas> with TickerProviderStat
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(false); // Fecha o diálogo e retorna false
+                Navigator.of(context).pop(false);
               },
               child: Text('Cancelar'),
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(true); // Fecha o diálogo e retorna true
+                Navigator.of(context).pop(true);
               },
               child: Text('Confirmar'),
             ),
@@ -117,7 +128,6 @@ class _ConverteMoedasState extends State<ConverteMoedas> with TickerProviderStat
     );
 
     if (confirmacao == true) {
-      // Se o usuário confirmou, reinicie a conversão
       _animationController.stop();
       _controller.clear();
       setState(() {
@@ -138,13 +148,13 @@ class _ConverteMoedasState extends State<ConverteMoedas> with TickerProviderStat
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(false); // Fecha o diálogo e retorna false
+                Navigator.of(context).pop(false);
               },
               child: Text('Cancelar'),
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(true); // Fecha o diálogo e retorna true
+                Navigator.of(context).pop(true);
               },
               child: Text('Confirmar'),
             ),
@@ -154,7 +164,6 @@ class _ConverteMoedasState extends State<ConverteMoedas> with TickerProviderStat
     );
 
     if (confirmacao == true) {
-      // Se o usuário confirmou, volta para a tela de login
       Navigator.pop(context, {'login': '', 'senha': ''});
     }
   }
@@ -164,6 +173,19 @@ class _ConverteMoedasState extends State<ConverteMoedas> with TickerProviderStat
     return Scaffold(
       appBar: AppBar(
         title: Text('Conversor de Moedas'),
+        actions: <Widget>[
+          IconButton(
+            icon: Icon(Icons.history),
+            onPressed: () async {
+              // Recuperar o histórico de conversões do banco de dados
+              List<Map<String, dynamic>> historico = await _recuperarHistorico();
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => Historico(historico: historico, onDelete: _excluirConversao)),
+              );
+            },
+          ),
+        ],
       ),
       body: Container(
         color: Colors.yellow[100],

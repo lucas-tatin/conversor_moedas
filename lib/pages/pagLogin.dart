@@ -38,7 +38,7 @@ class PagLogin extends StatelessWidget {
                 if (_loginController.text == '123' && _senhaController.text == '123') {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => ConverteMoedas()),
+                    MaterialPageRoute(builder: (context) => ConverteMoedas()), // Remova o parâmetro historico
                   );
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
