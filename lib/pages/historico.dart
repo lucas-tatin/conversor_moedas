@@ -20,6 +20,9 @@ class _HistoricoState extends State<Historico> {
   String? _filtroMoedaOrigem;
   String? _filtroMoedaDestino;
 
+  // Chave global para os dropdowns
+  GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
   @override
   void initState() {
     super.initState();
@@ -83,51 +86,56 @@ class _HistoricoState extends State<Historico> {
                 builder: (BuildContext context) {
                   return AlertDialog(
                     title: Text('Filtrar Histórico'),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        DropdownButton<String>(
-                          value: _filtroMoedaOrigem,
-                          onChanged: (String? novaMoeda) {
-                            setState(() {
-                              _filtroMoedaOrigem = novaMoeda;
-                            });
-                          },
-                          items: _getMoedasDropdownItems(), // Função para gerar itens do dropdown
-                          hint: Text('Filtrar por Moeda de Origem'),
-                        ),
-                        DropdownButton<String>(
-                          value: _filtroMoedaDestino,
-                          onChanged: (String? novaMoeda) {
-                            setState(() {
-                              _filtroMoedaDestino = novaMoeda;
-                            });
-                          },
-                          items: _getMoedasDropdownItems(), // Função para gerar itens do dropdown
-                          hint: Text('Filtrar por Moeda de Destino'),
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            TextButton(
-                              onPressed: () {
-                                setState(() {
-                                  _filtroMoedaOrigem = null;
-                                  _filtroMoedaDestino = null;
-                                });
-                                Navigator.pop(context);
-                              },
-                              child: Text('Limpar'),
-                            ),
-                            ElevatedButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                              },
-                              child: Text('Aplicar'),
-                            ),
-                          ],
-                        ),
-                      ],
+                    content: Form(
+                      key: _formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          DropdownButtonFormField<String>(
+                            value: _filtroMoedaOrigem,
+                            onChanged: (String? novaMoeda) {
+                              setState(() {
+                                _filtroMoedaOrigem = novaMoeda;
+                              });
+                            },
+                            items: _getMoedasDropdownItems(), // Função para gerar itens do dropdown
+                            hint: Text('Filtrar por Moeda de Origem'),
+                          ),
+                          DropdownButtonFormField<String>(
+                            value: _filtroMoedaDestino,
+                            onChanged: (String? novaMoeda) {
+                              setState(() {
+                                _filtroMoedaDestino = novaMoeda;
+                              });
+                            },
+                            items: _getMoedasDropdownItems(), // Função para gerar itens do dropdown
+                            hint: Text('Filtrar por Moeda de Destino'),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _filtroMoedaOrigem = null;
+                                    _filtroMoedaDestino = null;
+                                  });
+                                  Navigator.pop(context);
+                                },
+                                child: Text('Limpar'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  if (_formKey.currentState!.validate()) {
+                                    Navigator.pop(context);
+                                  }
+                                },
+                                child: Text('Aplicar'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },
