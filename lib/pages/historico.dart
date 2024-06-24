@@ -1,21 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart'; // Importe o Geolocator
 import '../database/converte_dao.dart';
 
-class Historico extends StatelessWidget {
-  final ConverteDAO _converteDAO = ConverteDAO();
-  final List<Map<String, dynamic>> historico; // Adicione este parâmetro
+class Historico extends StatefulWidget {
+  final List<Map<String, dynamic>> historico;
+  final Future<void> Function(int id) onDelete;
 
-  Historico({required this.historico, required Future<void> Function(int id) onDelete}); // Adicione este construtor
+  Historico({required this.historico, required this.onDelete});
+
+  @override
+  _HistoricoState createState() => _HistoricoState();
+}
+
+class _HistoricoState extends State<Historico> {
+  final ConverteDAO _converteDAO = ConverteDAO();
 
   Future<List<Map<String, dynamic>>> _fetchHistorico() async {
     return await _converteDAO.getConversoes();
   }
 
   void _limparHistorico(BuildContext context) async {
-    await _converteDAO.deleteConversoes();
+    await _converteDAO.deleteConversoes;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Histórico limpo')),
     );
+    setState(() {
+      widget.historico.clear();
+    });
   }
 
   @override
@@ -47,7 +58,24 @@ class Historico extends StatelessWidget {
               final item = snapshot.data![index];
               return ListTile(
                 title: Text('${item['moedaOrigem']} -> ${item['moedaDestino']}'),
-                subtitle: Text('Valor: ${item['valor']} Resultado: ${item['resultado']}'),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Valor: ${item['valor']} Resultado: ${item['resultado']}'),
+                    Text('Lat: ${item['latitude']} Long: ${item['longitude']}'),
+                  ],
+                ),
+                trailing: IconButton(
+                  icon: Icon(Icons.delete),
+                  onPressed: () async {
+                    await widget.onDelete(item['id']);
+                    List<Map<String, dynamic>> novoHistorico = await _fetchHistorico();
+                    setState(() {
+                      widget.historico.clear();
+                      widget.historico.addAll(novoHistorico);
+                    });
+                  },
+                ),
               );
             },
           );
@@ -61,3 +89,4 @@ class Historico extends StatelessWidget {
     );
   }
 }
+

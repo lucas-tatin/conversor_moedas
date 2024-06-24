@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:conversor_moedas/widgets/custom_text_field.dart';
 import '../database/converte_dao.dart';
 import 'historico.dart';
+import 'package:geolocator/geolocator.dart';
 
 class ConverteMoedas extends StatefulWidget {
   @override
@@ -17,7 +18,7 @@ class _ConverteMoedasState extends State<ConverteMoedas> with SingleTickerProvid
   bool _showError = false;
   bool _isConverting = false;
   late AnimationController _animationController;
-  final ConverteDAO _converteDAO = ConverteDAO(); // Instância da classe ConverteDAO
+  final ConverteDAO _converteDAO = ConverteDAO();
 
   final Map<String, double> _taxasDeCambio = {
     'Real': 1.0,
@@ -40,21 +41,50 @@ class _ConverteMoedasState extends State<ConverteMoedas> with SingleTickerProvid
     super.dispose();
   }
 
-  // Método para salvar a conversão no banco de dados
+  Future<Position> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      throw Exception('Serviço de localização desativado.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        throw Exception('Permissão de localização negada.');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      throw Exception('Permissão de localização permanentemente negada.');
+    }
+
+    return await Geolocator.getCurrentPosition();
+  }
+
   Future<void> _salvarConversao(double valor, double resultado) async {
     String moedaOrigem = _moedaOrigemSelecionada ?? '';
     String moedaDestino = _moedaDestinoSelecionada ?? '';
-    await _converteDAO.saveConversao(moedaOrigem, moedaDestino, valor, resultado);
+    try {
+      Position position = await _getCurrentLocation();
+      int result = await _converteDAO.saveConversao(moedaOrigem, moedaDestino, valor, resultado, position.latitude, position.longitude);
+      if (result == -1) {
+        print('Falha ao salvar conversão no banco de dados.');
+      }
+    } catch (e) {
+      print('Erro ao salvar conversão: $e');
+    }
   }
 
-  // Método para recuperar o histórico de conversões do banco de dados
   Future<List<Map<String, dynamic>>> _recuperarHistorico() async {
     return await _converteDAO.getConversoes();
   }
 
-  // Método para excluir uma conversão do banco de dados
   Future<void> _excluirConversao(int id) async {
-    await _converteDAO.deleteConversao(id);
+    await _converteDAO.deleteConversoes(id);
   }
 
   void _converterMoeda() async {
@@ -88,54 +118,30 @@ class _ConverteMoedasState extends State<ConverteMoedas> with SingleTickerProvid
 
     _animationController.repeat();
 
-    _disableConverterButton();
-
-    // Salvar a conversão no banco de dados
-    await _salvarConversao(valor, _result);
+    try {
+      await _salvarConversao(valor, _result);
+    } catch (e) {
+      print('Erro ao converter moeda: $e');
+    } finally {
+      _disableConverterButton();
+    }
   }
 
   void _disableConverterButton() {
-    Future.delayed(Duration(milliseconds: 500), () {
-      setState(() {
-        _isConverting = false;
-      });
+    _animationController.stop();
+    setState(() {
+      _isConverting = false;
     });
   }
 
-  void _novaConversao() async {
-    bool? confirmacao = await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Nova Conversão'),
-          content: Text('Deseja realmente sair desta conversão e iniciar uma nova?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(false);
-              },
-              child: Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(true);
-              },
-              child: Text('Confirmar'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmacao == true) {
-      _animationController.stop();
-      _controller.clear();
-      setState(() {
-        _result = 0.0;
-        _moedaOrigemSelecionada = null;
-        _moedaDestinoSelecionada = null;
-      });
-    }
+  void _novaConversao() {
+    _animationController.stop();
+    _controller.clear();
+    setState(() {
+      _result = 0.0;
+      _moedaOrigemSelecionada = null;
+      _moedaDestinoSelecionada = null;
+    });
   }
 
   void _sair() async {
@@ -177,7 +183,6 @@ class _ConverteMoedasState extends State<ConverteMoedas> with SingleTickerProvid
           IconButton(
             icon: Icon(Icons.history),
             onPressed: () async {
-              // Recuperar o histórico de conversões do banco de dados
               List<Map<String, dynamic>> historico = await _recuperarHistorico();
               Navigator.push(
                 context,
@@ -293,18 +298,15 @@ class _ConverteMoedasState extends State<ConverteMoedas> with SingleTickerProvid
                   onPressed: _novaConversao,
                   child: Text('Nova Conversão'),
                 ),
-                SizedBox(height: 20.0),
-                ElevatedButton(
-                  onPressed: _sair,
-                  child: Text('Sair', style: TextStyle(color: Colors.white)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                  ),
-                ),
               ],
             ),
           ),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _sair,
+        child: Icon(Icons.exit_to_app),
+        tooltip: 'Sair',
       ),
     );
   }
