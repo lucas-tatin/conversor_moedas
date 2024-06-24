@@ -14,7 +14,7 @@ class PagLogin extends StatelessWidget {
         title: Text('Login Conversor de Moedas'), // Título centralizado
         centerTitle: true,
       ),
-      body: SingleChildScrollView( // Adicionando SingleChildScrollView aqui
+      body: SingleChildScrollView(
         child: Padding(
           padding: EdgeInsets.all(20.0),
           child: Column(
@@ -26,14 +26,14 @@ class PagLogin extends StatelessWidget {
                 obscureText: false,
                 controller: _loginController,
               ),
-              SizedBox(height: 20.0),
+              SizedBox(height: 20.0), // Pode substituir por Padding ou Expanded se necessário
               CampoLogin(
                 icon: Icons.lock,
                 hintText: 'Digite sua senha',
                 obscureText: true,
                 controller: _senhaController,
               ),
-              SizedBox(height: 20.0),
+              SizedBox(height: 20.0), // Pode substituir por Padding ou Expanded se necessário
               ElevatedButton(
                 onPressed: () {
                   if (_loginController.text == '123' && _senhaController.text == '123') {

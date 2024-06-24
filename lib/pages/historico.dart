@@ -14,9 +14,43 @@ class Historico extends StatefulWidget {
 
 class _HistoricoState extends State<Historico> {
   final ConverteDAO _converteDAO = ConverteDAO();
+  late Position _currentPosition; // Variável para armazenar a posição atual
+
+  // Estados para controle dos filtros
+  String? _filtroMoedaOrigem;
+  String? _filtroMoedaDestino;
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation(); // Obtém a localização atual ao iniciar
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      setState(() {
+        _currentPosition = position;
+      });
+    } catch (e) {
+      print("Erro ao obter localização: $e");
+    }
+  }
 
   Future<List<Map<String, dynamic>>> _fetchHistorico() async {
-    return await _converteDAO.getConversoes();
+    List<Map<String, dynamic>> historico = await _converteDAO.getConversoes();
+
+    // Aplicar filtros se existirem
+    if (_filtroMoedaOrigem != null) {
+      historico = historico.where((conversao) => conversao['moedaOrigem'] == _filtroMoedaOrigem).toList();
+    }
+    if (_filtroMoedaDestino != null) {
+      historico = historico.where((conversao) => conversao['moedaDestino'] == _filtroMoedaDestino).toList();
+    }
+
+    return historico;
   }
 
   void _limparHistorico(BuildContext context) async {
@@ -40,6 +74,67 @@ class _HistoricoState extends State<Historico> {
             Navigator.pop(context);
           },
         ),
+        actions: <Widget>[
+          IconButton(
+            icon: Icon(Icons.filter_list),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: Text('Filtrar Histórico'),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        DropdownButton<String>(
+                          value: _filtroMoedaOrigem,
+                          onChanged: (String? novaMoeda) {
+                            setState(() {
+                              _filtroMoedaOrigem = novaMoeda;
+                            });
+                          },
+                          items: _getMoedasDropdownItems(), // Função para gerar itens do dropdown
+                          hint: Text('Filtrar por Moeda de Origem'),
+                        ),
+                        DropdownButton<String>(
+                          value: _filtroMoedaDestino,
+                          onChanged: (String? novaMoeda) {
+                            setState(() {
+                              _filtroMoedaDestino = novaMoeda;
+                            });
+                          },
+                          items: _getMoedasDropdownItems(), // Função para gerar itens do dropdown
+                          hint: Text('Filtrar por Moeda de Destino'),
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  _filtroMoedaOrigem = null;
+                                  _filtroMoedaDestino = null;
+                                });
+                                Navigator.pop(context);
+                              },
+                              child: Text('Limpar'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              child: Text('Aplicar'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ],
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _fetchHistorico(),
@@ -68,7 +163,8 @@ class _HistoricoState extends State<Historico> {
                 trailing: IconButton(
                   icon: Icon(Icons.delete),
                   onPressed: () async {
-                    await widget.onDelete(item['id']);
+                    await widget.onDelete(item['id']); // Acesse o 'id' corretamente aqui
+                    // Atualizar a interface do usuário após a exclusão
                     List<Map<String, dynamic>> novoHistorico = await _fetchHistorico();
                     setState(() {
                       widget.historico.clear();
@@ -88,5 +184,21 @@ class _HistoricoState extends State<Historico> {
       ),
     );
   }
-}
 
+  List<DropdownMenuItem<String>> _getMoedasDropdownItems() {
+    return [
+      DropdownMenuItem<String>(
+        value: 'Real',
+        child: Text('Real'),
+      ),
+      DropdownMenuItem<String>(
+        value: 'Dólar',
+        child: Text('Dólar'),
+      ),
+      DropdownMenuItem<String>(
+        value: 'Euro',
+        child: Text('Euro'),
+      ),
+    ];
+  }
+}
